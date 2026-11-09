@@ -122,15 +122,15 @@ router.put('/profile', authMiddleware, async (req, res) => {
 // PUT /api/auth/change-password
 router.put('/change-password', authMiddleware, async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ success: false, message: 'Old and new password are required.' });
+    const { newPassword } = req.body;
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: 'New password is required.' });
     }
     if (newPassword.length < 6) {
       return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
     }
 
-    await db.changePassword(req.user.id, { oldPassword, newPassword });
+    await db.changePassword(req.user.id, { newPassword });
     return res.json({ success: true, message: 'Password changed successfully.' });
   } catch (err) {
     console.error('[AUTH CHANGE PASSWORD ERROR]', err);

@@ -53,7 +53,7 @@ export function handleRoute() {
   if (appContainer) appContainer.style.display = 'flex';
 
   // Update sidebar active class
-  updateSidebarActive(segments[0]);
+  updateSidebarActive(segments);
 
   // Update notification counts in background
   api.getUnreadCount().then(res => {
@@ -109,11 +109,24 @@ export function handleRoute() {
   }
 }
 
-function updateSidebarActive(activeKey) {
+function updateSidebarActive(segments = []) {
+  const primary = segments[0] || 'dashboard';
+  const sub = segments[1] || '';
+
+  // Distinguish between 'projects' (My Projects) and 'projects/new' (Create Project)
+  let currentRouteKey = primary;
+  if (primary === 'projects') {
+    if (sub === 'new') {
+      currentRouteKey = 'projects/new';
+    } else {
+      currentRouteKey = 'projects';
+    }
+  }
+
   const links = document.querySelectorAll('.nav-item');
   links.forEach(l => {
     const route = l.dataset.route;
-    if (route && (route === activeKey || (activeKey === 'projects' && route.startsWith('projects')))) {
+    if (route === currentRouteKey) {
       l.classList.add('active');
     } else {
       l.classList.remove('active');

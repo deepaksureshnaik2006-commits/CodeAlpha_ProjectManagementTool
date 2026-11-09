@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
 const { supabase, isSupabaseConfigured } = require('./supabase');
 
 // Local file-backed database path
@@ -166,7 +167,14 @@ const db = {
     const normEmail = email.toLowerCase().trim();
 
     if (isSupabaseConfigured()) {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Create isolated auth client so we never overwrite the main service_role credentials
+      const authClient = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+
+      const { data, error } = await authClient.auth.signInWithPassword({
         email: normEmail,
         password
       });
@@ -297,8 +305,13 @@ const db = {
     return local.profiles[idx];
   },
 
-  async changePassword(userId, { oldPassword, newPassword }) {
+  async changePassword(userId, { newPassword }) {
     if (isSupabaseConfigured()) {
+      if (supabase.auth.admin?.updateUserById) {
+        const { data, error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
+        if (error) throw error;
+        return { success: true };
+      }
       const { data, error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       return { success: true };
@@ -307,9 +320,6 @@ const db = {
     const local = readLocalDb();
     const user = local.users.find(u => u.id === userId);
     if (!user) throw new Error('User not found.');
-
-    const match = await bcrypt.compare(oldPassword, user.password_hash);
-    if (!match) throw new Error('Incorrect current password.');
 
     const salt = await bcrypt.genSalt(10);
     user.password_hash = await bcrypt.hash(newPassword, salt);

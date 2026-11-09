@@ -285,6 +285,20 @@
   font-size: 1.5rem;
 }
 
+.avatar-xl {
+  width: 88px;
+  height: 88px;
+  font-size: 2rem;
+  border-width: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.avatar-xl:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
 .avatar-group {
   display: flex;
   align-items: center;

@@ -48,6 +48,8 @@ async function runTestSuite() {
 
   try {
     // 1. Start Server on test port
+    const { waitForReady } = require('../backend/config/supabase');
+    await waitForReady();
     await new Promise((resolve) => {
       testServer = server.listen(PORT, resolve);
     });
@@ -89,6 +91,19 @@ async function runTestSuite() {
       password: 'password123'
     });
     assert(aliceLogin.status === 200 && aliceLogin.data.user.full_name === 'Alice Johnson', 'Alice logged in with correct credentials');
+
+    // Direct password update without requiring old password
+    const pwdChange = await req('/api/auth/change-password', 'PUT', {
+      newPassword: 'newsecurepassword456'
+    }, aliceToken);
+    assert(pwdChange.status === 200 && pwdChange.data.success, 'Alice changed password directly without current password');
+
+    // Profile photo update
+    const profUpdate = await req('/api/auth/profile', 'PUT', {
+      fullName: 'Alice Johnson',
+      avatarUrl: 'data:image/jpeg;base64,samplephoto123'
+    }, aliceToken);
+    assert(profUpdate.status === 200 && profUpdate.data.user.avatar_url === 'data:image/jpeg;base64,samplephoto123', 'Alice updated profile avatar photo');
 
     // --------------------------------------------------------------------------
     // TEST 2: Creating and Managing Group Projects
@@ -140,7 +155,7 @@ async function runTestSuite() {
     const aliceJoin = await new Promise((resolve) => {
       aliceSocket.emit('join_project', { projectId }, resolve);
     });
-    assert(aliceJoin.success === true, 'Alice joined Socket.IO project room');
+    assert(aliceJoin && aliceJoin.success === true, 'Alice joined Socket.IO project room');
 
     const bobJoin = await new Promise((resolve) => {
       bobSocket.emit('join_project', { projectId }, resolve);

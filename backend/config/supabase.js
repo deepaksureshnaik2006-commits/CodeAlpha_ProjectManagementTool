@@ -6,7 +6,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 
 let supabase = null;
 let isConfigured = false;
-let isSchemaReady = false;
+let isSchemaReady = true; // Default true optimistically when valid credentials are provided
+let readyPromise = Promise.resolve();
 
 // Check if credentials are valid URL and not default placeholder
 if (
@@ -27,7 +28,7 @@ if (
     console.log('[TASKORA] Connected to Supabase at:', supabaseUrl);
 
     // Verify if *_taskora tables exist in Supabase
-    supabase
+    readyPromise = supabase
       .from('profiles_taskora')
       .select('id')
       .limit(1)
@@ -50,6 +51,7 @@ if (
     isConfigured = false;
   }
 } else {
+  isSchemaReady = false;
   console.log('[TASKORA] Supabase credentials not set or set to placeholders. Running in resilient local persistence mode.');
 }
 
@@ -57,5 +59,6 @@ module.exports = {
   supabase,
   isSupabaseConfigured: () => isConfigured && isSchemaReady,
   isSupabaseConnected: () => isConfigured,
-  isSchemaReady: () => isSchemaReady
+  isSchemaReady: () => isSchemaReady,
+  waitForReady: () => readyPromise
 };

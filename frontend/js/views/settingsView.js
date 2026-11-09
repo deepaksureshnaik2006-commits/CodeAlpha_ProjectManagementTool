@@ -1,88 +1,41 @@
-// TASKORA Settings View: System diagnostics, Supabase integration status, preferences
+// TASKORA Settings View: User workspace and notification preferences
 
-import { api } from '../api.js';
 import { showToast } from '../components/toast.js';
 
-export async function renderSettingsView(container) {
+export function renderSettingsView(container) {
+  // Load saved preferences or defaults
+  const prefs = JSON.parse(localStorage.getItem('taskora_user_prefs') || '{}');
+  const alertAssignments = prefs.alertAssignments !== false;
+  const alertComments = prefs.alertComments !== false;
+  const alertKanban = prefs.alertKanban !== false;
+  const compactCards = prefs.compactCards === true;
+  const soundNotifications = prefs.soundNotifications !== false;
+
   container.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center; min-height: 200px;">
-      <div style="color: var(--text-muted); font-size: 0.9rem;">Loading settings & system info...</div>
-    </div>
-  `;
+    <div style="max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+      
+      <div>
+        <h2 style="font-size: 1.4rem; font-weight: 700;">Workspace Settings</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Manage your in-app notification preferences and workspace display options</p>
+      </div>
 
-  try {
-    const health = await api.getHealth();
-
-    container.innerHTML = `
-      <div style="max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
-        
-        <div>
-          <h2 style="font-size: 1.4rem; font-weight: 700;">Settings & Integration</h2>
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Configure application behavior and review real-time infrastructure</p>
-        </div>
-
-        <!-- Infrastructure & Database Card -->
-        <div class="card">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="database" style="color: var(--color-primary); width: 18px; height: 18px;"></i>
-              <h3 class="card-title">Database & Backend Diagnostics</h3>
-            </div>
-            <span class="badge badge-admin">${health.database}</span>
-          </div>
-          <div class="card-body">
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border-color-light);">
-                <div>
-                  <div style="font-weight: 600;">Supabase PostgreSQL Status</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">Database schema: profiles, projects, members, tasks, comments, notifications, activities</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.82rem; color: #10b981;">
-                  <span class="status-dot"></span>
-                  <span>Active</span>
-                </div>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border-color-light);">
-                <div>
-                  <div style="font-weight: 600;">Real-Time WebSocket Protocol</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">Socket.IO Engine with project-specific rooms and direct user queues</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.82rem; color: #10b981;">
-                  <span class="status-dot"></span>
-                  <span>Connected</span>
-                </div>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-weight: 600;">Application Tagline</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">Official product motto</div>
-                </div>
-                <div style="font-style: italic; color: var(--text-main); font-weight: 500;">
-                  "${health.tagline}"
-                </div>
-              </div>
-            </div>
+      <!-- In-App Notification Preferences Card -->
+      <div class="card">
+        <div class="card-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="bell" style="color: var(--color-primary); width: 18px; height: 18px;"></i>
+            <h3 class="card-title">In-App Notification Alerts</h3>
           </div>
         </div>
-
-        <!-- Notification Preferences Card -->
-        <div class="card">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="bell-ring" style="color: var(--color-secondary); width: 18px; height: 18px;"></i>
-              <h3 class="card-title">In-App Notification Preferences</h3>
-            </div>
-          </div>
-          <div class="card-body">
+        <div class="card-body">
+          <form id="form-settings">
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
                 <div>
                   <div style="font-weight: 600;">Task Assignment Alerts</div>
                   <div style="font-size: 0.78rem; color: var(--text-muted);">Receive real-time toasts when team members assign tasks to you</div>
                 </div>
-                <input type="checkbox" checked style="accent-color: var(--color-primary); width: 18px; height: 18px;">
+                <input type="checkbox" id="pref-assignments" ${alertAssignments ? 'checked' : ''} style="accent-color: var(--color-primary); width: 18px; height: 18px; cursor: pointer;">
               </label>
 
               <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
@@ -90,7 +43,7 @@ export async function renderSettingsView(container) {
                   <div style="font-weight: 600;">Task Discussion Comments</div>
                   <div style="font-size: 0.78rem; color: var(--text-muted);">Receive real-time toasts when comments are posted on your tasks</div>
                 </div>
-                <input type="checkbox" checked style="accent-color: var(--color-primary); width: 18px; height: 18px;">
+                <input type="checkbox" id="pref-comments" ${alertComments ? 'checked' : ''} style="accent-color: var(--color-primary); width: 18px; height: 18px; cursor: pointer;">
               </label>
 
               <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
@@ -98,18 +51,61 @@ export async function renderSettingsView(container) {
                   <div style="font-weight: 600;">Kanban Board Movement Sync</div>
                   <div style="font-size: 0.78rem; color: var(--text-muted);">Notify when team members move cards between columns</div>
                 </div>
-                <input type="checkbox" checked style="accent-color: var(--color-primary); width: 18px; height: 18px;">
+                <input type="checkbox" id="pref-kanban" ${alertKanban ? 'checked' : ''} style="accent-color: var(--color-primary); width: 18px; height: 18px; cursor: pointer;">
+              </label>
+
+              <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">Audio Chimes for Updates</div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);">Play a subtle audible ping when a new real-time event is received</div>
+                </div>
+                <input type="checkbox" id="pref-sound" ${soundNotifications ? 'checked' : ''} style="accent-color: var(--color-primary); width: 18px; height: 18px; cursor: pointer;">
               </label>
             </div>
-          </div>
+
+            <!-- Workspace Experience Card Section -->
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color-light);">
+              <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="sliders" style="width: 16px; height: 16px; color: var(--color-secondary);"></i>
+                <span>Display & Workspace View</span>
+              </h4>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                  <div>
+                    <div style="font-weight: 600;">Compact Kanban Cards</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Display denser cards on the Kanban board to fit more tasks on screen</div>
+                  </div>
+                  <input type="checkbox" id="pref-compact" ${compactCards ? 'checked' : ''} style="accent-color: var(--color-primary); width: 18px; height: 18px; cursor: pointer;">
+                </label>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+              <button type="submit" class="btn btn-primary" id="btn-save-settings">
+                <i data-lucide="save"></i>
+                <span>Save Settings</span>
+              </button>
+            </div>
+          </form>
         </div>
-
       </div>
-    `;
 
-    if (window.lucide) window.lucide.createIcons({ root: container });
-  } catch (err) {
-    container.innerHTML = `<div class="card" style="padding: 24px; color: #dc2626;">Error: ${err.message}</div>`;
-  }
+    </div>
+  `;
+
+  if (window.lucide) window.lucide.createIcons({ root: container });
+
+  const form = container.querySelector('#form-settings');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const updated = {
+      alertAssignments: container.querySelector('#pref-assignments').checked,
+      alertComments: container.querySelector('#pref-comments').checked,
+      alertKanban: container.querySelector('#pref-kanban').checked,
+      soundNotifications: container.querySelector('#pref-sound').checked,
+      compactCards: container.querySelector('#pref-compact').checked
+    };
+    localStorage.setItem('taskora_user_prefs', JSON.stringify(updated));
+    showToast({ title: 'Preferences Saved', message: 'Your workspace settings have been saved successfully.', type: 'success' });
+  });
 }
-
