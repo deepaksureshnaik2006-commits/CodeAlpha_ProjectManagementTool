@@ -123,9 +123,8 @@ export async function renderTaskModal(taskId) {
 
               <!-- Add Comment Form -->
               <form id="form-new-comment" class="comment-input-box">
-                <textarea id="comment-text-input" placeholder="Write a comment... (Enter to submit)" rows="2" required></textarea>
+                <textarea id="comment-text-input" placeholder="Write a comment..." rows="2" required></textarea>
                 <div class="comment-input-footer">
-                  <span class="comment-tip">Shift+Enter for new line</span>
                   <button type="submit" id="btn-submit-comment" class="btn btn-primary btn-sm">
                     <i data-lucide="send" style="width: 14px; height: 14px;"></i>
                     <span>Comment</span>

@@ -202,7 +202,7 @@
 .comment-input-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding-top: 6px;
   border-top: 1px solid var(--border-color-light);
 }
