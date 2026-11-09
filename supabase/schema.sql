@@ -341,3 +341,4 @@ CREATE POLICY "Members can view project activity"
     ON public.activities FOR SELECT
     TO authenticated
     USING (public.is_project_member(project_id, auth.uid()));
+

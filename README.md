@@ -94,7 +94,7 @@ TASKORA/
 ├── supabase/
 │   └── schema.sql             # Complete Supabase PostgreSQL schema with RLS, triggers & indexes
 │
-├── server/
+├── backend/
 │   ├── index.js               # Application entry point (Express + Socket.IO server)
 │   ├── config/
 │   │   ├── supabase.js        # Supabase client initializer
@@ -115,7 +115,7 @@ TASKORA/
 │   └── utils/
 │       └── jwt.js             # JWT generation and verification
 │
-├── public/                    # Frontend Single Page Application (SPA)
+├── frontend/                  # Frontend Single Page Application (SPA)
 │   ├── index.html             # Main HTML5 shell
 │   ├── css/
 │   │   ├── theme.css          # Color variables, typography, resets
@@ -332,3 +332,4 @@ git push -u origin main
 ## 📄 License
 
 This project is licensed under the MIT License.
+

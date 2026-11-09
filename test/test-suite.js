@@ -5,7 +5,7 @@
 
 const http = require('http');
 const { io: ioClient } = require('socket.io-client');
-const { app, server } = require('../server/index');
+const { app, server } = require('../backend/index');
 
 const PORT = 3099; // Dedicated test port
 const BASE_URL = `http://localhost:${PORT}`;
@@ -305,3 +305,4 @@ async function runTestSuite() {
 }
 
 runTestSuite();
+
