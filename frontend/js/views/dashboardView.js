@@ -133,70 +133,149 @@ export async function renderDashboardView(container) {
           </div>
         </div>
 
-        <!-- Recent Activity Feed -->
+        <!-- Recent Activity Feed with Daily Date Filter -->
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <i data-lucide="activity" style="color: var(--color-secondary); width: 18px; height: 18px;"></i>
               <h3 class="card-title">Recent Activity</h3>
             </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="date" id="activity-date-filter" class="form-input" style="padding: 4px 8px; font-size: 0.78rem; height: 30px; width: auto; cursor: pointer;" title="Filter activities by date">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-activity-today" style="padding: 4px 10px; font-size: 0.75rem;">Today</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-activity-reset" style="display: none; padding: 4px 8px; font-size: 0.75rem; color: var(--color-primary);" title="Show all recent activity">Show All</button>
+            </div>
           </div>
-          <div class="card-body" style="max-height: 380px; overflow-y: auto;">
-            ${stats.recentActivity.length === 0 ? `
-              <div class="empty-state" style="padding: 24px 0;">
-                <div class="empty-icon" style="width: 44px; height: 44px;"><i data-lucide="history"></i></div>
-                <div class="empty-title" style="font-size: 0.95rem;">No recent activities</div>
-                <div class="empty-description" style="font-size: 0.8rem; margin-bottom: 0;">Project events and task updates will show here.</div>
-              </div>
-            ` : `
-              <div>
-                ${stats.recentActivity.map(act => {
-                  const userName = act.user?.full_name || 'Team member';
-                  const actTime = new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
-                  let actionText = 'updated project';
-                  let icon = 'info';
-
-                  if (act.action === 'created_project') {
-                    actionText = `created project <strong>${act.details?.projectName || ''}</strong>`;
-                    icon = 'folder-plus';
-                  } else if (act.action === 'created_task') {
-                    actionText = `added task "<strong>${act.details?.title || 'task'}</strong>"`;
-                    icon = 'plus-circle';
-                  } else if (act.action === 'moved_task') {
-                    actionText = `moved "<strong>${act.details?.title || ''}</strong>" to ${(act.details?.toStatus || '').replace('_', ' ')}`;
-                    icon = 'arrow-right';
-                  } else if (act.action === 'commented_on_task') {
-                    actionText = `commented on "<strong>${act.details?.title || 'task'}</strong>"`;
-                    icon = 'message-square';
-                  } else if (act.action === 'added_member') {
-                    actionText = `added <strong>${act.details?.memberName || 'a member'}</strong> to the team`;
-                    icon = 'user-plus';
-                  } else if (act.action === 'deleted_task') {
-                    actionText = `removed task "<strong>${act.details?.title || ''}</strong>"`;
-                    icon = 'trash-2';
-                  }
-
-                  return `
-                    <div class="activity-item">
-                      <div class="avatar avatar-sm">
-                        ${act.user?.avatar_url ? `<img src="${act.user.avatar_url}" alt="${userName}">` : userName[0]}
-                      </div>
-                      <div style="flex: 1;">
-                        <div class="activity-text">
-                          <strong>${userName}</strong> ${actionText}
-                        </div>
-                        <div class="activity-time">${actTime}</div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            `}
+          <div class="card-body" id="activity-stream-body" style="max-height: 380px; overflow-y: auto;">
+            <!-- Populated dynamically by renderActivityStream -->
           </div>
         </div>
 
       </div>
     `;
+
+    // Interactive Daily Date Filter Logic
+    const allActivities = stats.recentActivity || [];
+    const streamBody = container.querySelector('#activity-stream-body');
+    const dateInput = container.querySelector('#activity-date-filter');
+    const todayBtn = container.querySelector('#btn-activity-today');
+    const resetBtn = container.querySelector('#btn-activity-reset');
+
+    function renderActivityStream(selectedDate = null) {
+      if (!streamBody) return;
+
+      let list = allActivities;
+      if (selectedDate) {
+        list = allActivities.filter(act => {
+          const actDate = new Date(act.created_at).toISOString().split('T')[0];
+          return actDate === selectedDate;
+        });
+      }
+
+      if (list.length === 0) {
+        if (selectedDate) {
+          const formatted = new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          streamBody.innerHTML = `
+            <div class="empty-state" style="padding: 36px 16px; text-align: center;">
+              <div class="empty-icon" style="width: 44px; height: 44px; margin: 0 auto 12px; background: rgba(99, 102, 241, 0.08); color: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="calendar-x"></i>
+              </div>
+              <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">No activity on ${formatted}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">No team actions, task updates, or comments occurred on this date.</div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-empty-show-all" style="display: inline-flex;">
+                <i data-lucide="rotate-ccw"></i>
+                <span>View All Activities</span>
+              </button>
+            </div>
+          `;
+          const emptyShowAll = streamBody.querySelector('#btn-empty-show-all');
+          if (emptyShowAll) {
+            emptyShowAll.addEventListener('click', () => {
+              if (dateInput) dateInput.value = '';
+              if (resetBtn) resetBtn.style.display = 'none';
+              renderActivityStream(null);
+            });
+          }
+        } else {
+          streamBody.innerHTML = `
+            <div class="empty-state" style="padding: 24px 0;">
+              <div class="empty-icon" style="width: 44px; height: 44px;"><i data-lucide="history"></i></div>
+              <div class="empty-title" style="font-size: 0.95rem;">No recent activities</div>
+              <div class="empty-description" style="font-size: 0.8rem; margin-bottom: 0;">Project events and task updates will show here.</div>
+            </div>
+          `;
+        }
+      } else {
+        streamBody.innerHTML = `
+          <div>
+            ${list.map(act => {
+              const userName = act.user?.full_name || 'Team member';
+              const actTime = new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+              let actionText = 'updated project';
+
+              if (act.action === 'created_project') {
+                actionText = `created project <strong>${act.details?.projectName || ''}</strong>`;
+              } else if (act.action === 'created_task') {
+                actionText = `added task "<strong>${act.details?.title || 'task'}</strong>"`;
+              } else if (act.action === 'moved_task') {
+                actionText = `moved "<strong>${act.details?.title || ''}</strong>" to ${(act.details?.toStatus || '').replace('_', ' ')}`;
+              } else if (act.action === 'commented_on_task') {
+                actionText = `commented on "<strong>${act.details?.title || 'task'}</strong>"`;
+              } else if (act.action === 'added_member') {
+                actionText = `added <strong>${act.details?.memberName || 'a member'}</strong> to the team`;
+              } else if (act.action === 'deleted_task') {
+                actionText = `removed task "<strong>${act.details?.title || ''}</strong>"`;
+              }
+
+              return `
+                <div class="activity-item">
+                  <div class="avatar avatar-sm">
+                    ${act.user?.avatar_url ? `<img src="${act.user.avatar_url}" alt="${userName}">` : userName[0]}
+                  </div>
+                  <div style="flex: 1;">
+                    <div class="activity-text">
+                      <strong>${userName}</strong> ${actionText}
+                    </div>
+                    <div class="activity-time">${actTime}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      if (window.lucide) window.lucide.createIcons({ root: streamBody });
+    }
+
+    // Initial render of all activities
+    renderActivityStream(null);
+
+    // Event listeners for date filtering
+    if (dateInput) {
+      dateInput.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (resetBtn) resetBtn.style.display = val ? 'inline-flex' : 'none';
+        renderActivityStream(val || null);
+      });
+    }
+
+    if (todayBtn) {
+      todayBtn.addEventListener('click', () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (dateInput) dateInput.value = todayStr;
+        if (resetBtn) resetBtn.style.display = 'inline-flex';
+        renderActivityStream(todayStr);
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (dateInput) dateInput.value = '';
+        resetBtn.style.display = 'none';
+        renderActivityStream(null);
+      });
+    }
 
     if (window.lucide) window.lucide.createIcons({ root: container });
   } catch (err) {

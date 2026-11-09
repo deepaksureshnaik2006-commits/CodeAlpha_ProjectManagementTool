@@ -2,6 +2,7 @@
 
 import { isAuthenticated, state, setUnreadCount } from './state.js';
 import { api } from './api.js';
+import { renderLandingView } from './views/landingView.js';
 import { renderAuthView } from './views/authView.js';
 import { renderDashboardView } from './views/dashboardView.js';
 import { renderProjectsList, renderCreateProject, renderProjectDetails } from './views/projectsView.js';
@@ -12,10 +13,11 @@ import { renderProfileView } from './views/profileView.js';
 import { renderSettingsView } from './views/settingsView.js';
 
 export function handleRoute() {
-  const hash = window.location.hash || '#/dashboard';
-  const path = hash.split('?')[0].replace('#/', '').trim();
+  const hash = window.location.hash || '';
+  const path = hash.split('?')[0].replace('#/', '').replace('#', '').trim();
   const segments = path.split('/');
 
+  const landingView = document.getElementById('landing-view');
   const authView = document.getElementById('auth-view');
   const appContainer = document.getElementById('app-container');
   const mainView = document.getElementById('main-view');
@@ -24,31 +26,63 @@ export function handleRoute() {
   // Hide quick task button by default (Kanban will reveal if applicable)
   if (quickNewTaskBtn) quickNewTaskBtn.style.display = 'none';
 
-  // 1. Auth check
   const isAuth = isAuthenticated();
   const isAuthRoute = ['login', 'register', 'forgot-password', 'reset-password'].includes(segments[0]);
+  const isLandingRoute = ['', 'home', 'landing'].includes(segments[0]);
 
+  // 1. Unauthenticated user handling
   if (!isAuth) {
-    if (!isAuthRoute) {
-      window.location.hash = '#/login';
+    if (isLandingRoute) {
+      if (appContainer) appContainer.style.display = 'none';
+      if (authView) authView.style.display = 'none';
+      if (landingView) {
+        landingView.style.display = 'block';
+        renderLandingView(landingView);
+      }
       return;
     }
 
-    if (appContainer) appContainer.style.display = 'none';
-    if (authView) {
-      authView.style.display = 'block';
-      renderAuthView(authView, segments[0]);
+    if (isAuthRoute) {
+      if (appContainer) appContainer.style.display = 'none';
+      if (landingView) landingView.style.display = 'none';
+      if (authView) {
+        authView.style.display = 'block';
+        renderAuthView(authView, segments[0]);
+      }
+      return;
     }
+
+    // Visiting protected route while logged out -> redirect to landing or login
+    window.location.hash = '#/login';
     return;
   }
 
-  // If already authenticated and visiting auth route, redirect to dashboard
+  // 2. Authenticated user handling
+  // If authenticated and visiting auth screens, redirect to dashboard
   if (isAuthRoute) {
     window.location.hash = '#/dashboard';
     return;
   }
 
-  // Show App Workspace
+  // Root empty hash for logged in users -> dashboard
+  if (segments[0] === '' && hash === '') {
+    window.location.hash = '#/dashboard';
+    return;
+  }
+
+  // Public homepage view for authenticated users (shows 'Go to Dashboard' pill)
+  if (segments[0] === 'home' || segments[0] === 'landing') {
+    if (appContainer) appContainer.style.display = 'none';
+    if (authView) authView.style.display = 'none';
+    if (landingView) {
+      landingView.style.display = 'block';
+      renderLandingView(landingView);
+    }
+    return;
+  }
+
+  // 3. Authenticated App Workspace
+  if (landingView) landingView.style.display = 'none';
   if (authView) authView.style.display = 'none';
   if (appContainer) appContainer.style.display = 'flex';
 
@@ -60,11 +94,11 @@ export function handleRoute() {
     setUnreadCount(res.count || 0);
   }).catch(() => {});
 
-  // 2. Route Dispatcher
+  // 4. Route Dispatcher
   const pageHeading = document.getElementById('page-heading');
   const pageBreadcrumb = document.getElementById('page-breadcrumb');
 
-  if (segments[0] === 'dashboard' || segments[0] === '') {
+  if (segments[0] === 'dashboard') {
     if (pageHeading) pageHeading.textContent = 'Dashboard';
     if (pageBreadcrumb) pageBreadcrumb.innerHTML = 'TASKORA &rsaquo; Overview';
     renderDashboardView(mainView);
@@ -104,7 +138,7 @@ export function handleRoute() {
     if (pageBreadcrumb) pageBreadcrumb.innerHTML = 'TASKORA &rsaquo; Workspace & System Settings';
     renderSettingsView(mainView);
   } else {
-    // 404 fallback to dashboard
+    // Fallback to dashboard
     window.location.hash = '#/dashboard';
   }
 }
@@ -133,4 +167,3 @@ function updateSidebarActive(segments = []) {
     }
   });
 }
-

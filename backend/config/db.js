@@ -1376,7 +1376,7 @@ const db = {
         `)
         .in('project_id', projectIds)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(50);
 
       return {
         totalProjects,
