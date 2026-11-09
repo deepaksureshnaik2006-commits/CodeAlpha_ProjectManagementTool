@@ -63,28 +63,55 @@ const db = {
     const normEmail = email.toLowerCase().trim();
 
     if (isSupabaseConfigured()) {
-      // 1. Supabase Auth registration
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email: normEmail,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            avatar_url: avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`
-          }
-        }
-      });
-      if (authErr) throw authErr;
+      let userId;
+      const avatar = avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`;
 
-      const userId = authData.user?.id;
-      // Upsert into public.profiles
+      // 1. Try Supabase Auth Admin creation (auto-confirms email so registration doesn't fail on SMTP)
+      try {
+        const { data: adminData, error: adminErr } = await supabase.auth.admin.createUser({
+          email: normEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: fullName,
+            avatar_url: avatar
+          }
+        });
+        if (adminErr) {
+          // If user already exists, bubble up error
+          if (adminErr.message && adminErr.message.toLowerCase().includes('already')) {
+            throw adminErr;
+          }
+          throw adminErr;
+        }
+        userId = adminData.user?.id;
+      } catch (err) {
+        // If admin failed for another reason, try standard signUp
+        if (err.message && err.message.toLowerCase().includes('already')) {
+          throw err;
+        }
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email: normEmail,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              avatar_url: avatar
+            }
+          }
+        });
+        if (authErr) throw authErr;
+        userId = authData.user?.id;
+      }
+
+      // Upsert into public.profiles_taskora
       const { data: profile, error: profErr } = await supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .upsert({
           id: userId,
           email: normEmail,
           full_name: fullName,
-          avatar_url: avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+          avatar_url: avatar,
           updated_at: new Date().toISOString()
         })
         .select()
@@ -93,7 +120,7 @@ const db = {
       if (profErr) {
         console.warn('[TASKORA] Profile upsert warning:', profErr.message);
       }
-      return profile || { id: userId, email: normEmail, full_name: fullName, avatar_url: avatarUrl };
+      return profile || { id: userId, email: normEmail, full_name: fullName, avatar_url: avatar };
     }
 
     // Local DB fallback
@@ -146,7 +173,7 @@ const db = {
       if (error) throw error;
 
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .select('*')
         .eq('id', data.user.id)
         .single();
@@ -182,7 +209,7 @@ const db = {
   async getProfileById(userId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .select('*')
         .eq('id', userId)
         .single();
@@ -198,7 +225,7 @@ const db = {
     const normEmail = email.toLowerCase().trim();
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .select('*')
         .eq('email', normEmail)
         .single();
@@ -218,7 +245,7 @@ const db = {
       if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl;
 
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .update(updateData)
         .eq('id', userId)
         .select()
@@ -315,7 +342,7 @@ const db = {
     const q = query.toLowerCase().trim();
     if (isSupabaseConfigured()) {
       let req = supabase
-        .from('profiles')
+        .from('profiles_taskora')
         .select('id, email, full_name, avatar_url');
       if (q) {
         req = req.or(`full_name.ilike.%${q}%,email.ilike.%${q}%`);
@@ -356,7 +383,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data: project, error: projErr } = await supabase
-        .from('projects')
+        .from('projects_taskora')
         .insert({
           id: projectId,
           name,
@@ -371,7 +398,7 @@ const db = {
       if (projErr) throw projErr;
 
       // Add owner as a member with 'owner' role
-      await supabase.from('project_members').insert({
+      await supabase.from('project_members_taskora').insert({
         project_id: projectId,
         user_id: ownerId,
         role: 'owner',
@@ -425,7 +452,7 @@ const db = {
     if (isSupabaseConfigured()) {
       // Find projects where user is owner or member
       const { data: memberships, error: memErr } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .select('project_id, role')
         .eq('user_id', userId);
       if (memErr) throw memErr;
@@ -434,10 +461,10 @@ const db = {
       if (projectIds.length === 0) return [];
 
       const { data: projects, error: projErr } = await supabase
-        .from('projects')
+        .from('projects_taskora')
         .select(`
           *,
-          owner:profiles!projects_owner_id_fkey(id, full_name, email, avatar_url)
+          owner:profiles_taskora!fk_projects_owner(id, full_name, email, avatar_url)
         `)
         .in('id', projectIds)
         .order('created_at', { ascending: false });
@@ -448,11 +475,11 @@ const db = {
         projects.map(async p => {
           const role = memberships.find(m => m.project_id === p.id)?.role || (p.owner_id === userId ? 'owner' : 'member');
           const { count: memberCount } = await supabase
-            .from('project_members')
+            .from('project_members_taskora')
             .select('*', { count: 'exact', head: true })
             .eq('project_id', p.id);
           const { data: tasks } = await supabase
-            .from('tasks')
+            .from('tasks_taskora')
             .select('status')
             .eq('project_id', p.id);
           const totalTasks = tasks ? tasks.length : 0;
@@ -506,10 +533,10 @@ const db = {
   async getProjectById(projectId) {
     if (isSupabaseConfigured()) {
       const { data: project, error } = await supabase
-        .from('projects')
+        .from('projects_taskora')
         .select(`
           *,
-          owner:profiles!projects_owner_id_fkey(id, full_name, email, avatar_url)
+          owner:profiles_taskora!fk_projects_owner(id, full_name, email, avatar_url)
         `)
         .eq('id', projectId)
         .single();
@@ -533,7 +560,7 @@ const db = {
       if (color !== undefined) updates.color = color;
 
       const { data, error } = await supabase
-        .from('projects')
+        .from('projects_taskora')
         .update(updates)
         .eq('id', projectId)
         .select()
@@ -557,7 +584,7 @@ const db = {
 
   async deleteProject(projectId) {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      const { error } = await supabase.from('projects_taskora').delete().eq('id', projectId);
       if (error) throw error;
       return true;
     }
@@ -579,14 +606,14 @@ const db = {
   async getProjectMembers(projectId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .select(`
           id,
           project_id,
           user_id,
           role,
           created_at,
-          user:profiles!project_members_user_id_fkey(id, full_name, email, avatar_url)
+          user:profiles_taskora!fk_project_members_user(id, full_name, email, avatar_url)
         `)
         .eq('project_id', projectId)
         .order('created_at', { ascending: true });
@@ -624,7 +651,7 @@ const db = {
     const now = new Date().toISOString();
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .insert({
           project_id: projectId,
           user_id: userId,
@@ -664,7 +691,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .update({ role })
         .eq('project_id', projectId)
         .eq('user_id', userId)
@@ -688,7 +715,7 @@ const db = {
   async removeProjectMember(projectId, userId) {
     if (isSupabaseConfigured()) {
       const { error } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .delete()
         .eq('project_id', projectId)
         .eq('user_id', userId);
@@ -714,14 +741,14 @@ const db = {
     if (isSupabaseConfigured()) {
       // Check owner first
       const { data: proj } = await supabase
-        .from('projects')
+        .from('projects_taskora')
         .select('owner_id')
         .eq('id', projectId)
         .single();
       if (proj && proj.owner_id === userId) return 'owner';
 
       const { data: mem } = await supabase
-        .from('project_members')
+        .from('project_members_taskora')
         .select('role')
         .eq('project_id', projectId)
         .eq('user_id', userId)
@@ -758,7 +785,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('tasks')
+        .from('tasks_taskora')
         .insert({
           id: taskId,
           project_id: projectId,
@@ -775,8 +802,8 @@ const db = {
         })
         .select(`
           *,
-          assignee:profiles!tasks_assignee_id_fkey(id, full_name, email, avatar_url),
-          creator:profiles!tasks_created_by_fkey(id, full_name, email, avatar_url)
+          assignee:profiles_taskora!fk_tasks_assignee(id, full_name, email, avatar_url),
+          creator:profiles_taskora!fk_tasks_creator(id, full_name, email, avatar_url)
         `)
         .single();
       if (error) throw error;
@@ -809,11 +836,11 @@ const db = {
   async getTasksByProject(projectId) {
     if (isSupabaseConfigured()) {
       const { data: tasks, error } = await supabase
-        .from('tasks')
+        .from('tasks_taskora')
         .select(`
           *,
-          assignee:profiles!tasks_assignee_id_fkey(id, full_name, email, avatar_url),
-          creator:profiles!tasks_created_by_fkey(id, full_name, email, avatar_url)
+          assignee:profiles_taskora!fk_tasks_assignee(id, full_name, email, avatar_url),
+          creator:profiles_taskora!fk_tasks_creator(id, full_name, email, avatar_url)
         `)
         .eq('project_id', projectId)
         .order('position', { ascending: true })
@@ -825,7 +852,7 @@ const db = {
       if (taskIds.length === 0) return [];
 
       const { data: commentCounts } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .select('task_id')
         .in('task_id', taskIds);
 
@@ -855,19 +882,19 @@ const db = {
   async getTaskById(taskId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('tasks')
+        .from('tasks_taskora')
         .select(`
           *,
-          assignee:profiles!tasks_assignee_id_fkey(id, full_name, email, avatar_url),
-          creator:profiles!tasks_created_by_fkey(id, full_name, email, avatar_url),
-          project:projects!tasks_project_id_fkey(id, name, color)
+          assignee:profiles_taskora!fk_tasks_assignee(id, full_name, email, avatar_url),
+          creator:profiles_taskora!fk_tasks_creator(id, full_name, email, avatar_url),
+          project:projects_taskora!fk_tasks_project(id, name, color)
         `)
         .eq('id', taskId)
         .single();
       if (error) return null;
 
       const { count } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .select('*', { count: 'exact', head: true })
         .eq('task_id', taskId);
 
@@ -899,13 +926,13 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('tasks')
+        .from('tasks_taskora')
         .update(filteredUpdates)
         .eq('id', taskId)
         .select(`
           *,
-          assignee:profiles!tasks_assignee_id_fkey(id, full_name, email, avatar_url),
-          creator:profiles!tasks_created_by_fkey(id, full_name, email, avatar_url)
+          assignee:profiles_taskora!fk_tasks_assignee(id, full_name, email, avatar_url),
+          creator:profiles_taskora!fk_tasks_creator(id, full_name, email, avatar_url)
         `)
         .single();
       if (error) throw error;
@@ -929,7 +956,7 @@ const db = {
 
   async deleteTask(taskId) {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      const { error } = await supabase.from('tasks_taskora').delete().eq('id', taskId);
       if (error) throw error;
       return true;
     }
@@ -950,7 +977,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .insert({
           id: commentId,
           task_id: taskId,
@@ -961,7 +988,7 @@ const db = {
         })
         .select(`
           *,
-          user:profiles!task_comments_user_id_fkey(id, full_name, email, avatar_url)
+          user:profiles_taskora!fk_task_comments_user(id, full_name, email, avatar_url)
         `)
         .single();
       if (error) throw error;
@@ -987,10 +1014,10 @@ const db = {
   async getCommentsByTask(taskId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .select(`
           *,
-          user:profiles!task_comments_user_id_fkey(id, full_name, email, avatar_url)
+          user:profiles_taskora!fk_task_comments_user(id, full_name, email, avatar_url)
         `)
         .eq('task_id', taskId)
         .order('created_at', { ascending: true });
@@ -1011,7 +1038,7 @@ const db = {
   async getCommentById(commentId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .select('*')
         .eq('id', commentId)
         .single();
@@ -1027,12 +1054,12 @@ const db = {
     const now = new Date().toISOString();
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('task_comments')
+        .from('task_comments_taskora')
         .update({ content, updated_at: now })
         .eq('id', commentId)
         .select(`
           *,
-          user:profiles!task_comments_user_id_fkey(id, full_name, email, avatar_url)
+          user:profiles_taskora!fk_task_comments_user(id, full_name, email, avatar_url)
         `)
         .single();
       if (error) throw error;
@@ -1053,7 +1080,7 @@ const db = {
 
   async deleteComment(commentId) {
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('task_comments').delete().eq('id', commentId);
+      const { error } = await supabase.from('task_comments_taskora').delete().eq('id', commentId);
       if (error) throw error;
       return true;
     }
@@ -1073,7 +1100,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('notifications')
+        .from('notifications_taskora')
         .insert({
           id: notifId,
           user_id: userId,
@@ -1087,7 +1114,7 @@ const db = {
         })
         .select(`
           *,
-          actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)
+          actor:profiles_taskora!fk_notifications_actor(id, full_name, avatar_url)
         `)
         .single();
       if (error) throw error;
@@ -1116,10 +1143,10 @@ const db = {
   async getNotificationsByUser(userId, limit = 50) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('notifications')
+        .from('notifications_taskora')
         .select(`
           *,
-          actor:profiles!notifications_actor_id_fkey(id, full_name, avatar_url)
+          actor:profiles_taskora!fk_notifications_actor(id, full_name, avatar_url)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -1142,7 +1169,7 @@ const db = {
   async markNotificationAsRead(notificationId, userId) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('notifications')
+        .from('notifications_taskora')
         .update({ is_read: true })
         .eq('id', notificationId)
         .eq('user_id', userId)
@@ -1164,7 +1191,7 @@ const db = {
   async markAllNotificationsAsRead(userId) {
     if (isSupabaseConfigured()) {
       const { error } = await supabase
-        .from('notifications')
+        .from('notifications_taskora')
         .update({ is_read: true })
         .eq('user_id', userId)
         .eq('is_read', false);
@@ -1183,7 +1210,7 @@ const db = {
   async getUnreadNotificationCount(userId) {
     if (isSupabaseConfigured()) {
       const { count, error } = await supabase
-        .from('notifications')
+        .from('notifications_taskora')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('is_read', false);
@@ -1204,7 +1231,7 @@ const db = {
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('activities')
+        .from('activities_taskora')
         .insert({
           id: actId,
           project_id: projectId,
@@ -1236,10 +1263,10 @@ const db = {
   async getActivitiesByProject(projectId, limit = 30) {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
-        .from('activities')
+        .from('activities_taskora')
         .select(`
           *,
-          user:profiles!activities_user_id_fkey(id, full_name, avatar_url)
+          user:profiles_taskora!fk_activities_user(id, full_name, avatar_url)
         `)
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
@@ -1282,11 +1309,11 @@ const db = {
     if (isSupabaseConfigured()) {
       // Get all tasks across user's projects
       const { data: allTasks } = await supabase
-        .from('tasks')
+        .from('tasks_taskora')
         .select(`
           *,
-          project:projects!tasks_project_id_fkey(id, name, color),
-          assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)
+          project:projects_taskora!fk_tasks_project(id, name, color),
+          assignee:profiles_taskora!fk_tasks_assignee(id, full_name, avatar_url)
         `)
         .in('project_id', projectIds);
 
@@ -1308,11 +1335,11 @@ const db = {
 
       // Recent activities across projects
       const { data: activities } = await supabase
-        .from('activities')
+        .from('activities_taskora')
         .select(`
           *,
-          user:profiles!activities_user_id_fkey(id, full_name, avatar_url),
-          project:projects!activities_project_id_fkey(id, name)
+          user:profiles_taskora!fk_activities_user(id, full_name, avatar_url),
+          project:projects_taskora!fk_activities_project(id, name)
         `)
         .in('project_id', projectIds)
         .order('created_at', { ascending: false })
