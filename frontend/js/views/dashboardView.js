@@ -201,9 +201,16 @@ export async function renderDashboardView(container) {
     if (window.lucide) window.lucide.createIcons({ root: container });
   } catch (err) {
     container.innerHTML = `
-      <div class="card" style="padding: 24px; text-align: center; color: #dc2626;">
-        <i data-lucide="alert-triangle" style="width: 32px; height: 32px; margin-bottom: 8px;"></i>
-        <div>Failed to load dashboard: ${err.message}</div>
+      <div class="card" style="padding: 32px 24px; text-align: center; max-width: 480px; margin: 40px auto;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background-color: rgba(239, 68, 68, 0.1); color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+        </div>
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Session Notice</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">${err.message}</p>
+        <a href="#/login" class="btn btn-primary" style="display: inline-flex;">
+          <i data-lucide="log-in"></i>
+          <span>Sign In to Refresh Session</span>
+        </a>
       </div>
     `;
     if (window.lucide) window.lucide.createIcons({ root: container });

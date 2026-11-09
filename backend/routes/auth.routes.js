@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
     }
 
     const { user, session } = await db.authenticateUser({ email, password });
-    const token = session?.access_token || generateToken({ id: user.id, email: user.email });
+    const token = generateToken({ id: user.id, email: user.email });
 
     return res.json({
       success: true,
