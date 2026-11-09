@@ -1,0 +1,36 @@
+{
+  "name": "taskora",
+  "version": "1.0.0",
+  "description": "TASKORA – Full-Stack Collaborative Project Management Tool (Plan Together. Work Smarter. Deliver Better.)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "test": "node test/test-suite.js"
+  },
+  "keywords": [
+    "taskora",
+    "project-management",
+    "kanban",
+    "socketio",
+    "supabase",
+    "realtime",
+    "collaboration"
+  ],
+  "author": "CodeAlpha",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "socket.io-client": "^4.8.4"
+  }
+}
