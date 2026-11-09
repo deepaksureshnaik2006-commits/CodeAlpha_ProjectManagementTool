@@ -32,11 +32,11 @@ export function renderAuthView(container, subview = 'login') {
               </div>
               <div class="auth-feature-item">
                 <div class="auth-feature-icon"><i data-lucide="check"></i></div>
-                <span>Real-time WebSocket synchronization with Socket.IO</span>
+                <span>Real-time instant live collaboration & updates</span>
               </div>
               <div class="auth-feature-item">
                 <div class="auth-feature-icon"><i data-lucide="check"></i></div>
-                <span>Task comments with instant chronological updates</span>
+                <span>Task comments with instant chronological discussions</span>
               </div>
               <div class="auth-feature-item">
                 <div class="auth-feature-icon"><i data-lucide="check"></i></div>
@@ -46,7 +46,7 @@ export function renderAuthView(container, subview = 'login') {
           </div>
 
           <div class="auth-hero-footer">
-            &copy; ${new Date().getFullYear()} TASKORA. Powered by Supabase & Socket.IO.
+            &copy; ${new Date().getFullYear()} TASKORA. Plan Together. Work Smarter. Deliver Better.
           </div>
         </div>
 

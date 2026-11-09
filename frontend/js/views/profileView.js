@@ -103,7 +103,7 @@ export function renderProfileView(container) {
             <div class="form-group">
               <label class="form-label" for="profile-email-input">Email Address</label>
               <input type="email" id="profile-email-input" class="form-input" value="${user.email || ''}" disabled style="background-color: var(--bg-surface-secondary); cursor: not-allowed;">
-              <span class="form-hint">Email address is linked to your Supabase authentication account</span>
+              <span class="form-hint">Email address is linked to your verified primary account</span>
             </div>
 
             <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
