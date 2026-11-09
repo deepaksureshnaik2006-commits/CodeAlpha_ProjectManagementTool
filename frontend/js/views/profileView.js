@@ -3,6 +3,7 @@
 import { api } from '../api.js';
 import { state, setAuth } from '../state.js';
 import { showToast } from '../components/toast.js';
+import { setupPasswordToggles } from '../components/passwordToggle.js';
 
 export function renderProfileView(container) {
   const user = state.user || {};
@@ -69,18 +70,33 @@ export function renderProfileView(container) {
           <form id="form-change-password">
             <div class="form-group">
               <label class="form-label" for="old-pwd-input">Current Password</label>
-              <input type="password" id="old-pwd-input" class="form-input" placeholder="••••••••" required>
+              <div class="password-input-wrap">
+                <input type="password" id="old-pwd-input" class="form-input" placeholder="••••••••" required>
+                <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+                  <i data-lucide="eye"></i>
+                </button>
+              </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="new-pwd-input">New Password</label>
-                <input type="password" id="new-pwd-input" class="form-input" placeholder="At least 6 characters" minlength="6" required>
+                <div class="password-input-wrap">
+                  <input type="password" id="new-pwd-input" class="form-input" placeholder="At least 6 characters" minlength="6" required>
+                  <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+                    <i data-lucide="eye"></i>
+                  </button>
+                </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label" for="confirm-pwd-input">Confirm New Password</label>
-                <input type="password" id="confirm-pwd-input" class="form-input" placeholder="Repeat new password" minlength="6" required>
+                <div class="password-input-wrap">
+                  <input type="password" id="confirm-pwd-input" class="form-input" placeholder="Repeat new password" minlength="6" required>
+                  <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+                    <i data-lucide="eye"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -98,6 +114,7 @@ export function renderProfileView(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons({ root: container });
+  setupPasswordToggles(container);
 
   // Dicebear generator helper
   const genBtn = container.querySelector('#btn-dicebear-avatar');

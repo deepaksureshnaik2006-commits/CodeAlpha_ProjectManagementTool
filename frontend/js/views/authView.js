@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { setAuth } from '../state.js';
 import { initSocket } from '../socket.js';
 import { showToast } from '../components/toast.js';
+import { setupPasswordToggles } from '../components/passwordToggle.js';
 
 export function renderAuthView(container, subview = 'login') {
   container.innerHTML = `
@@ -96,7 +97,12 @@ function renderLoginForm(container) {
           <label class="form-label" for="login-password">Password</label>
           <a href="#/forgot-password" style="font-size: 0.78rem;">Forgot password?</a>
         </div>
-        <input type="password" id="login-password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        <div class="password-input-wrap">
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+          <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
       </div>
 
       <button type="submit" id="btn-submit-login" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 10px;">
@@ -111,6 +117,7 @@ function renderLoginForm(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons({ root: container });
+  setupPasswordToggles(container);
 
   const form = container.querySelector('#form-login');
   form.addEventListener('submit', async (e) => {
@@ -167,12 +174,22 @@ function renderRegisterForm(container) {
 
       <div class="form-group">
         <label class="form-label" for="reg-password">Password</label>
-        <input type="password" id="reg-password" class="form-input" placeholder="At least 6 characters" minlength="6" required autocomplete="new-password">
+        <div class="password-input-wrap">
+          <input type="password" id="reg-password" class="form-input" placeholder="At least 6 characters" minlength="6" required autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="reg-confirm">Confirm Password</label>
-        <input type="password" id="reg-confirm" class="form-input" placeholder="Repeat your password" minlength="6" required autocomplete="new-password">
+        <div class="password-input-wrap">
+          <input type="password" id="reg-confirm" class="form-input" placeholder="Repeat your password" minlength="6" required autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
       </div>
 
       <button type="submit" id="btn-submit-register" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 10px;">
@@ -187,6 +204,7 @@ function renderRegisterForm(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons({ root: container });
+  setupPasswordToggles(container);
 
   const form = container.querySelector('#form-register');
   form.addEventListener('submit', async (e) => {
@@ -217,10 +235,17 @@ function renderRegisterForm(container) {
       showToast({ title: 'Welcome to TASKORA!', message: 'Your account is ready.', type: 'success' });
       window.location.hash = '#/dashboard';
     } catch (err) {
-      alertEl.className = 'alert-message alert-error';
-      alertEl.innerHTML = `<i data-lucide="alert-circle"></i><span>${err.message || 'Registration failed.'}</span>`;
+      const msg = err.message || '';
+      const isAlreadyRegistered = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists');
+
+      alertEl.className = `alert-message ${isAlreadyRegistered ? 'alert-error' : 'alert-error'}`;
+      alertEl.innerHTML = `
+        <i data-lucide="alert-circle"></i>
+        <span>${isAlreadyRegistered ? `This email is already registered. <a href="#/login" style="font-weight: 700; text-decoration: underline; color: inherit;">Click here to Sign In &rarr;</a>` : msg || 'Registration failed.'}</span>
+      `;
       alertEl.style.display = 'flex';
       if (window.lucide) window.lucide.createIcons({ root: alertEl });
+
       btn.disabled = false;
       btn.innerHTML = `<span>Create Account</span><i data-lucide="arrow-right"></i>`;
       if (window.lucide) window.lucide.createIcons({ root: btn });
@@ -329,7 +354,12 @@ function renderResetPasswordForm(container) {
 
       <div class="form-group">
         <label class="form-label" for="reset-password">New Password</label>
-        <input type="password" id="reset-password" class="form-input" placeholder="At least 6 characters" minlength="6" required>
+        <div class="password-input-wrap">
+          <input type="password" id="reset-password" class="form-input" placeholder="At least 6 characters" minlength="6" required>
+          <button type="button" class="password-toggle-btn" aria-label="Show password" title="Toggle password visibility">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
       </div>
 
       <button type="submit" id="btn-submit-reset" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 10px;">
@@ -344,6 +374,7 @@ function renderResetPasswordForm(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons({ root: container });
+  setupPasswordToggles(container);
 
   const form = container.querySelector('#form-reset');
   form.addEventListener('submit', async (e) => {
@@ -371,4 +402,3 @@ function renderResetPasswordForm(container) {
     }
   });
 }
-

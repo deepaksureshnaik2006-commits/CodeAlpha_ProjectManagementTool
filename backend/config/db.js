@@ -172,11 +172,34 @@ const db = {
       });
       if (error) throw error;
 
-      const { data: profile } = await supabase
+      let { data: profile } = await supabase
         .from('profiles_taskora')
         .select('*')
         .eq('id', data.user.id)
         .single();
+
+      if (!profile) {
+        // Auto-provision profile into profiles_taskora if user was registered in another app on this Supabase project
+        const fullName = data.user.user_metadata?.full_name || normEmail.split('@')[0];
+        const avatarUrl = data.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`;
+        try {
+          const { data: newProfile } = await supabase
+            .from('profiles_taskora')
+            .upsert({
+              id: data.user.id,
+              email: normEmail,
+              full_name: fullName,
+              avatar_url: avatarUrl,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          profile = newProfile;
+        } catch (e) {
+          console.warn('[TASKORA] Auto-profile creation notice:', e.message);
+        }
+      }
 
       return {
         user: profile || { id: data.user.id, email: normEmail, full_name: data.user.user_metadata?.full_name || normEmail },
