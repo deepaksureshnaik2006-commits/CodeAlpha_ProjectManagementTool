@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { state, setCurrentProject } from '../state.js';
 import { ROLES } from '../config.js';
 import { showToast } from '../components/toast.js';
-import { showModal } from '../components/modal.js';
+import { showModal, showConfirmDialog } from '../components/modal.js';
 
 // ------------------------------------------------------------------------------
 // 1. MY PROJECTS LIST
@@ -419,7 +419,14 @@ export async function renderProjectDetails(container, projectId) {
       btn.addEventListener('click', async () => {
         const memberId = btn.dataset.memberId;
         const name = btn.dataset.name;
-        if (!confirm(`Remove ${name} from this project?`)) return;
+        const confirmed = await showConfirmDialog({
+          title: 'Remove Member',
+          message: `Are you sure you want to remove ${name} from this project?`,
+          confirmText: 'Remove Member',
+          confirmBtnClass: 'btn-danger',
+          icon: 'user-x'
+        });
+        if (!confirmed) return;
 
         try {
           await api.removeMember(projectId, memberId);

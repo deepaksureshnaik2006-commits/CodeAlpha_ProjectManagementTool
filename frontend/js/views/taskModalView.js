@@ -3,7 +3,7 @@
 import { api } from '../api.js';
 import { state, setCurrentTasks } from '../state.js';
 import { PRIORITIES, STATUSES } from '../config.js';
-import { showModal } from '../components/modal.js';
+import { showModal, showConfirmDialog } from '../components/modal.js';
 import { showToast } from '../components/toast.js';
 
 export async function renderTaskModal(taskId) {
@@ -332,7 +332,14 @@ export async function renderTaskModal(taskId) {
       contentContainer.querySelectorAll('.btn-delete-comment').forEach(btn => {
         btn.onclick = async () => {
           const commentId = btn.dataset.commentId;
-          if (!confirm('Are you sure you want to delete this comment?')) return;
+          const confirmed = await showConfirmDialog({
+            title: 'Delete Comment',
+            message: 'Are you sure you want to delete this comment?',
+            confirmText: 'Delete',
+            confirmBtnClass: 'btn-danger',
+            icon: 'trash-2'
+          });
+          if (!confirmed) return;
 
           try {
             await api.deleteComment(commentId);

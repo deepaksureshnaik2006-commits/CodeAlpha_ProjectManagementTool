@@ -6,7 +6,7 @@ import { PRIORITIES, STATUSES } from '../config.js';
 import { joinProjectRoom, leaveProjectRoom } from '../socket.js';
 import { setupDragAndDrop } from '../components/dragDrop.js';
 import { showToast } from '../components/toast.js';
-import { showModal } from '../components/modal.js';
+import { showModal, showConfirmDialog } from '../components/modal.js';
 import { renderTaskModal } from './taskModalView.js';
 
 let activeSearchTerm = '';
@@ -65,6 +65,9 @@ export async function renderKanbanView(container, projectId) {
       const inProgressTasks = filteredTasks.filter(t => t.status === 'in_progress');
       const completedTasks = filteredTasks.filter(t => t.status === 'completed');
 
+      const prefs = JSON.parse(localStorage.getItem('taskora_user_prefs') || '{}');
+      const isCompact = prefs.compactCards === true;
+
       container.innerHTML = `
         <div class="kanban-view-header">
           <!-- Top info bar -->
@@ -119,7 +122,7 @@ export async function renderKanbanView(container, projectId) {
         </div>
 
         <!-- 3 Kanban Columns -->
-        <div class="kanban-board">
+        <div class="kanban-board ${isCompact ? 'kanban-compact' : ''}">
           <!-- Column 1: To Do -->
           ${renderColumn('todo', STATUSES.todo.label, todoTasks, projectId)}
 
@@ -194,7 +197,14 @@ export async function renderKanbanView(container, projectId) {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const taskId = btn.dataset.taskId;
-          if (!confirm('Are you sure you want to delete this task?')) return;
+          const confirmed = await showConfirmDialog({
+            title: 'Delete Task',
+            message: 'Are you sure you want to delete this task? All attached comments will be permanently removed.',
+            confirmText: 'Delete Task',
+            confirmBtnClass: 'btn-danger',
+            icon: 'trash-2'
+          });
+          if (!confirmed) return;
 
           try {
             await api.deleteTask(taskId);

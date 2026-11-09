@@ -348,6 +348,10 @@
   max-width: 800px;
 }
 
+.modal-small {
+  max-width: 440px;
+}
+
 @keyframes modal-enter {
   from {
     opacity: 0;

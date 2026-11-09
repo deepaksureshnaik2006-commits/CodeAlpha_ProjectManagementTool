@@ -4,6 +4,7 @@ import { state, setAuth, subscribe, isAuthenticated } from './state.js';
 import { handleRoute } from './router.js';
 import { initSocket, disconnectSocket } from './socket.js';
 import { api } from './api.js';
+import { showConfirmDialog } from './components/modal.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide icons on page load
@@ -86,11 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Logout button
+  // Logout button with UI-based confirmation modal
   const logoutBtn = document.getElementById('btn-logout');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to sign out of TASKORA?')) {
+      const confirmed = await showConfirmDialog({
+        title: 'Sign Out',
+        message: 'Are you sure you want to sign out of TASKORA?',
+        confirmText: 'Sign Out',
+        cancelText: 'Cancel',
+        confirmBtnClass: 'btn-danger',
+        icon: 'log-out'
+      });
+
+      if (confirmed) {
         try {
           await api.logout();
         } catch (e) {}

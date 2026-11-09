@@ -330,3 +330,25 @@
   }
 }
 
+/* ------------------------------------------------------------------------------
+   COMPACT KANBAN CARDS MODE (Toggled via Workspace Settings)
+   ------------------------------------------------------------------------------ */
+.kanban-compact .task-card {
+  padding: 8px 12px;
+  gap: 6px;
+  border-radius: var(--radius-md);
+}
+
+.kanban-compact .task-card-desc {
+  display: none;
+}
+
+.kanban-compact .task-card-title {
+  font-size: 0.85rem;
+}
+
+.kanban-compact .task-card-meta {
+  padding-top: 4px;
+  margin-top: 0;
+}
+
