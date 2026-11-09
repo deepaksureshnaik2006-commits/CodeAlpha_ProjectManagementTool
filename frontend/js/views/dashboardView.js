@@ -3,6 +3,7 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { PRIORITIES } from '../config.js';
+import { showToast } from '../components/toast.js';
 
 export async function renderDashboardView(container) {
   container.innerHTML = `
@@ -141,7 +142,7 @@ export async function renderDashboardView(container) {
               <h3 class="card-title">Recent Activity</h3>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="date" id="activity-date-filter" class="form-input" style="padding: 4px 8px; font-size: 0.78rem; height: 30px; width: auto; cursor: pointer;" title="Filter activities by date">
+              <input type="date" id="activity-date-filter" class="form-input" max="${new Date().toISOString().split('T')[0]}" style="padding: 4px 8px; font-size: 0.78rem; height: 30px; width: auto; cursor: pointer;" title="Filter activities by past dates or today">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-activity-today" style="padding: 4px 10px; font-size: 0.75rem;">Today</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-activity-reset" style="display: none; padding: 4px 8px; font-size: 0.75rem; color: var(--color-primary);" title="Show all recent activity">Show All</button>
             </div>
@@ -252,9 +253,23 @@ export async function renderDashboardView(container) {
     renderActivityStream(null);
 
     // Event listeners for date filtering
+    const todayStr = new Date().toISOString().split('T')[0];
     if (dateInput) {
+      dateInput.max = todayStr;
       dateInput.addEventListener('change', (e) => {
         const val = e.target.value;
+        // Block future dates
+        if (val && val > todayStr) {
+          showToast({
+            title: 'Future Date Not Available',
+            message: 'You cannot select future dates because no activity has occurred yet. Showing today instead.',
+            type: 'error'
+          });
+          dateInput.value = todayStr;
+          if (resetBtn) resetBtn.style.display = 'inline-flex';
+          renderActivityStream(todayStr);
+          return;
+        }
         if (resetBtn) resetBtn.style.display = val ? 'inline-flex' : 'none';
         renderActivityStream(val || null);
       });
