@@ -82,7 +82,12 @@ export async function renderProjectsList(container) {
                   <span>${p.memberCount || 1} ${p.memberCount === 1 ? 'member' : 'members'}</span>
                 </div>
 
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  ${p.userRole === 'owner' ? `
+                    <button class="btn btn-ghost btn-sm btn-delete-project-card" data-project-id="${p.id}" data-project-name="${p.name}" style="color: #ef4444; padding: 6px 8px;" title="Delete Project">
+                      <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                    </button>
+                  ` : ''}
                   <a href="#/projects/${p.id}" class="btn btn-secondary btn-sm" title="Project Details & Members">
                     <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
                     <span>Manage</span>
@@ -100,6 +105,31 @@ export async function renderProjectsList(container) {
     `;
 
     if (window.lucide) window.lucide.createIcons({ root: container });
+
+    // Handle Quick Delete on Project Cards (Owner only)
+    container.querySelectorAll('.btn-delete-project-card').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const pId = btn.dataset.projectId;
+        const pName = btn.dataset.projectName;
+        const confirmed = await showConfirmDialog({
+          title: 'Delete Project?',
+          message: `Are you sure you want to delete "${pName}"? All tasks, columns, and comments will be permanently erased. This action cannot be undone.`,
+          confirmText: 'Delete Project',
+          confirmBtnClass: 'btn-danger',
+          icon: 'trash-2'
+        });
+        if (!confirmed) return;
+
+        try {
+          await api.deleteProject(pId);
+          showToast({ title: 'Project Deleted', message: `Project "${pName}" was deleted.`, type: 'info' });
+          renderProjectsList(container);
+        } catch (err) {
+          showToast({ title: 'Error', message: err.message, type: 'error' });
+        }
+      });
+    });
   } catch (err) {
     container.innerHTML = `<div class="card" style="padding: 24px; color: #dc2626;">Error: ${err.message}</div>`;
   }
@@ -264,7 +294,7 @@ export async function renderProjectDetails(container, projectId) {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Joined</th>
-                ${isOwnerOrAdmin ? `<th style="text-align: right;">Actions</th>` : ''}
+                ${isOwner ? `<th style="text-align: right;">Actions</th>` : ''}
               </tr>
             </thead>
             <tbody>
@@ -296,9 +326,9 @@ export async function renderProjectDetails(container, projectId) {
                       `}
                     </td>
                     <td style="color: var(--text-muted); font-size: 0.8rem;">${joinDate}</td>
-                    ${isOwnerOrAdmin ? `
+                    ${isOwner ? `
                       <td style="text-align: right;">
-                        ${!isCurrentUser && (isOwner || m.role === 'member') ? `
+                        ${!isCurrentUser ? `
                           <button class="btn btn-ghost btn-sm remove-member-btn" data-member-id="${m.user_id}" data-name="${m.full_name}" style="color: #ef4444;" title="Remove from project">
                             <i data-lucide="user-minus" style="width: 15px; height: 15px;"></i>
                             <span>Remove</span>
@@ -317,32 +347,26 @@ export async function renderProjectDetails(container, projectId) {
 
     if (window.lucide) window.lucide.createIcons({ root: container });
 
-    // Handle Delete Project
+    // Handle Delete Project (Owner only)
     const deleteBtn = container.querySelector('#btn-delete-project');
     if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        showModal({
+      deleteBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirmDialog({
           title: 'Delete Project?',
-          content: `<p style="color: var(--text-muted); font-size: 0.9rem;">Are you sure you want to delete <strong>${project.name}</strong>? All tasks, columns, and comments will be permanently erased. This action cannot be undone.</p>`,
-          footerButtons: [
-            { id: 'btn-cancel-del', text: 'Cancel', className: 'btn-secondary', onClick: (e, close) => close() },
-            {
-              id: 'btn-confirm-del',
-              text: 'Delete Project',
-              className: 'btn-danger',
-              onClick: async (e, close) => {
-                try {
-                  await api.deleteProject(projectId);
-                  close();
-                  showToast({ title: 'Deleted', message: 'Project was deleted.', type: 'info' });
-                  window.location.hash = '#/projects';
-                } catch (err) {
-                  showToast({ title: 'Error', message: err.message, type: 'error' });
-                }
-              }
-            }
-          ]
+          message: `Are you sure you want to delete "${project.name}"? All tasks, columns, and comments will be permanently erased. This action cannot be undone.`,
+          confirmText: 'Delete Project',
+          confirmBtnClass: 'btn-danger',
+          icon: 'trash-2'
         });
+        if (!confirmed) return;
+
+        try {
+          await api.deleteProject(projectId);
+          showToast({ title: 'Deleted', message: 'Project was deleted.', type: 'info' });
+          window.location.hash = '#/projects';
+        } catch (err) {
+          showToast({ title: 'Error', message: err.message, type: 'error' });
+        }
       });
     }
 

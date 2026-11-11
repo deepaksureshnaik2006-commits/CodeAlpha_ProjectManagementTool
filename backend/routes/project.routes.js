@@ -196,15 +196,25 @@ router.put('/:projectId/members/:memberId', requireProjectAdmin, async (req, res
   }
 });
 
-// DELETE /api/projects/:projectId/members/:memberId - remove member
-router.delete('/:projectId/members/:memberId', requireProjectAdmin, async (req, res) => {
+// DELETE /api/projects/:projectId/members/:memberId - remove member (Owner only)
+router.delete('/:projectId/members/:memberId', requireProjectOwner, async (req, res) => {
   try {
     const { memberId } = req.params;
     if (memberId === req.user.id) {
       return res.status(400).json({ success: false, message: 'You cannot remove yourself. Leave project or transfer ownership instead.' });
     }
 
+    const memberProfile = await db.getProfileById(memberId);
     await db.removeProjectMember(req.projectId, memberId);
+
+    // Record activity
+    await db.createActivity({
+      projectId: req.projectId,
+      userId: req.user.id,
+      action: 'removed_member',
+      details: { memberName: memberProfile?.full_name || 'Team member' }
+    });
+
     return res.json({
       success: true,
       message: 'Member removed from project.'

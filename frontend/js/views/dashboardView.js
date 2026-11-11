@@ -224,6 +224,8 @@ export async function renderDashboardView(container) {
                 actionText = `commented on "<strong>${act.details?.title || 'task'}</strong>"`;
               } else if (act.action === 'added_member') {
                 actionText = `added <strong>${act.details?.memberName || 'a member'}</strong> to the team`;
+              } else if (act.action === 'removed_member') {
+                actionText = `removed <strong>${act.details?.memberName || 'a member'}</strong> from the project`;
               } else if (act.action === 'deleted_task') {
                 actionText = `removed task "<strong>${act.details?.title || ''}</strong>"`;
               }

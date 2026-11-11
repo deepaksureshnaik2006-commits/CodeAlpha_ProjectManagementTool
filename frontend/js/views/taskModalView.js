@@ -93,7 +93,11 @@ export async function renderTaskModal(taskId) {
               <textarea id="task-edit-desc" class="form-textarea" placeholder="Add detailed notes or requirements..." style="min-height: 110px;">${task.description || ''}</textarea>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+              <button id="btn-delete-task-modal" type="button" class="btn btn-ghost btn-sm" style="color: #ef4444;" title="Delete this task">
+                <i data-lucide="trash-2"></i>
+                <span>Delete Task</span>
+              </button>
               <button id="btn-save-task-props" class="btn btn-primary btn-sm">
                 <i data-lucide="check"></i>
                 <span>Save Changes</span>
@@ -179,6 +183,31 @@ export async function renderTaskModal(taskId) {
           } catch (err) {
             showToast({ title: 'Error', message: err.message, type: 'error' });
             saveBtn.disabled = false;
+          }
+        });
+      }
+
+      // Delete Task Handler (inside modal)
+      const deleteModalBtn = contentContainer.querySelector('#btn-delete-task-modal');
+      if (deleteModalBtn) {
+        deleteModalBtn.addEventListener('click', async () => {
+          const confirmed = await showConfirmDialog({
+            title: 'Delete Task',
+            message: `Are you sure you want to delete "${task.title}"? All attached comments will be permanently removed.`,
+            confirmText: 'Delete Task',
+            confirmBtnClass: 'btn-danger',
+            icon: 'trash-2'
+          });
+          if (!confirmed) return;
+
+          try {
+            await api.deleteTask(taskId);
+            state.currentTasks = state.currentTasks.filter(t => t.id !== taskId);
+            setCurrentTasks([...state.currentTasks]);
+            closeModal();
+            showToast({ title: 'Task Deleted', message: 'Task removed successfully.', type: 'info' });
+          } catch (err) {
+            showToast({ title: 'Error', message: err.message, type: 'error' });
           }
         });
       }

@@ -275,6 +275,7 @@ async function runTestSuite() {
       fullName: 'Charlie Outsider'
     });
     const charlieToken = charlieReg.data.token;
+    const charlieId = charlieReg.data.user.id;
 
     // Charlie attempts to view Alice's project tasks
     const unauthorizedTasks = await req(`/api/projects/${projectId}/tasks`, 'GET', null, charlieToken);
@@ -302,6 +303,42 @@ async function runTestSuite() {
     assert(bobDashboard.data.stats.totalAssignedTasks >= 1, `Dashboard shows real database count for assigned tasks (${bobDashboard.data.stats.totalAssignedTasks})`);
     assert(bobDashboard.data.stats.tasksInProgress >= 1, `Dashboard shows real database count for tasks in progress (${bobDashboard.data.stats.tasksInProgress})`);
     assert(bobDashboard.data.stats.recentActivity.length > 0, `Dashboard contains real activity logs (${bobDashboard.data.stats.recentActivity.length} events)`);
+
+    // --------------------------------------------------------------------------
+    // TEST 10: Task, Project, and Member Deletion (Owner-Only Restrictions)
+    // --------------------------------------------------------------------------
+    console.log('\n--- Test 10: Delete Task, Member, and Project ---');
+
+    // 1. Task Deletion by Project Member
+    const delTaskRes = await req(`/api/tasks/${taskId}`, 'DELETE', null, bobToken);
+    assert(delTaskRes.status === 200, 'Member Bob can delete a task');
+
+    // 2. Member Deletion: Promote Bob to Admin
+    const promoteBobRes = await req(`/api/projects/${projectId}/members/${bobId}`, 'PUT', { role: 'admin' }, aliceToken);
+    assert(promoteBobRes.status === 200, 'Owner Alice promoted Bob to Admin');
+
+    // Add Charlie as member
+    const addCharlieRes = await req(`/api/projects/${projectId}/members`, 'POST', {
+      userId: charlieId,
+      role: 'member'
+    }, aliceToken);
+    assert(addCharlieRes.status === 201, 'Owner Alice added Charlie to project');
+
+    // Admin Bob attempts to remove Charlie -> MUST BE REJECTED with 403 Forbidden!
+    const adminRemoveRes = await req(`/api/projects/${projectId}/members/${charlieId}`, 'DELETE', null, bobToken);
+    assert(adminRemoveRes.status === 403, 'Admin Bob is rejected with 403 Forbidden when attempting to remove member (Owner only)');
+
+    // Owner Alice removes Charlie -> SUCCESS with 200 OK
+    const ownerRemoveRes = await req(`/api/projects/${projectId}/members/${charlieId}`, 'DELETE', null, aliceToken);
+    assert(ownerRemoveRes.status === 200, 'Owner Alice successfully removed Charlie from project');
+
+    // 3. Project Deletion: Admin Bob attempts to delete project -> MUST BE REJECTED with 403 Forbidden!
+    const adminDelProjRes = await req(`/api/projects/${projectId}`, 'DELETE', null, bobToken);
+    assert(adminDelProjRes.status === 403, 'Non-owner Bob is rejected with 403 Forbidden when attempting to delete project');
+
+    // Owner Alice deletes project -> SUCCESS with 200 OK
+    const ownerDelProjRes = await req(`/api/projects/${projectId}`, 'DELETE', null, aliceToken);
+    assert(ownerDelProjRes.status === 200, 'Owner Alice successfully deleted project');
 
     console.log('\n==============================================================');
     console.log(`   🎉 ALL ${passedTests}/${totalTests} TESTS PASSED SUCCESSFULLY!`);

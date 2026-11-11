@@ -62,7 +62,7 @@ export function renderLandingView(container) {
           </h1>
 
           <p class="landing-hero-subtitle">
-            TASKORA brings teams together with intuitive Kanban boards, priority task assignments, real-time WebSocket synchronization, and focused discussion streams.
+            TASKORA brings teams together with intuitive Kanban boards, priority task assignments, instant real-time synchronization, and focused discussion streams.
           </p>
 
           <div class="landing-hero-ctas">
@@ -83,7 +83,7 @@ export function renderLandingView(container) {
             </div>
             <div class="landing-trust-item">
               <i data-lucide="zap"></i>
-              <span>Real-time WebSocket sync</span>
+              <span>Instant real-time sync</span>
             </div>
             <div class="landing-trust-item">
               <i data-lucide="shield-check"></i>
@@ -158,7 +158,7 @@ export function renderLandingView(container) {
                       <div class="preview-card">
                         <span class="preview-badge-high">High Priority</span>
                         <div class="preview-card-title">Design System & Dark Theme</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Build reusable UI component library with Lucide icons.</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Build cohesive visual themes and customizable team workspace views.</div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.7rem; color: #94a3b8;">
                           <span>Due in 3 days</span>
                           <span style="display: flex; align-items: center; gap: 4px;"><i data-lucide="message-square" style="width: 12px; height: 12px;"></i> 2</span>
@@ -168,7 +168,7 @@ export function renderLandingView(container) {
                       <div class="preview-card">
                         <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.68rem; align-self: flex-start;">Medium</span>
                         <div class="preview-card-title">Role-Based Permission Rules</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Restrict project editing to Owners and Admins.</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Restrict project editing and member removal to workspace Owners.</div>
                       </div>
                     </div>
 
@@ -181,8 +181,8 @@ export function renderLandingView(container) {
 
                       <div class="preview-card" style="border-left: 3px solid #6366f1;">
                         <span class="preview-badge-urgent">Urgent</span>
-                        <div class="preview-card-title">WebSocket Real-Time Engine</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Broadcast live task cards, movements, and comments without refresh.</div>
+                        <div class="preview-card-title">Live Collaboration Engine</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Broadcast live task cards, movements, and comments across all teammates.</div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.7rem; color: #94a3b8;">
                           <span style="color: #6366f1; font-weight: 600;">Active Now</span>
                           <span style="display: flex; align-items: center; gap: 4px;"><i data-lucide="message-square" style="width: 12px; height: 12px;"></i> 5</span>
@@ -191,8 +191,8 @@ export function renderLandingView(container) {
 
                       <div class="preview-card">
                         <span class="preview-badge-high">High Priority</span>
-                        <div class="preview-card-title">Drag-and-Drop Column Reordering</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Smooth card dragging with HTML5 drag API.</div>
+                        <div class="preview-card-title">Drag-and-Drop Workflow Boards</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Smooth card movement across columns with real-time sync for teammates.</div>
                       </div>
                     </div>
 
@@ -211,8 +211,8 @@ export function renderLandingView(container) {
 
                       <div class="preview-card">
                         <span class="preview-badge-done">Completed</span>
-                        <div class="preview-card-title">PostgreSQL Database Schema</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">Configured projects, tasks, comments, and activity indexes.</div>
+                        <div class="preview-card-title">Real-Time Activity & Feeds</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">Instant tracking of assignments, task movements, and milestone achievements.</div>
                       </div>
                     </div>
                   </div>
@@ -283,9 +283,9 @@ export function renderLandingView(container) {
               <div class="feature-icon-wrap">
                 <i data-lucide="zap" style="width: 24px; height: 24px;"></i>
               </div>
-              <h3 class="feature-title">Real-Time WebSocket Sync</h3>
+              <h3 class="feature-title">Instant Real-Time Synchronization</h3>
               <p class="feature-desc">
-                Powered by a high-performance Socket.IO engine. When a teammate moves a card, adds a task, or posts a comment, your board updates instantly without a refresh.
+                Powered by a high-performance real-time engine. When a teammate moves a card, adds a task, or posts a comment, your board updates immediately without ever needing to refresh.
               </p>
             </div>
 
@@ -374,8 +374,8 @@ export function renderLandingView(container) {
               <div style="font-size: 0.85rem; color: #64748b;">Manual Refresh Needed</div>
             </div>
             <div>
-              <div style="font-size: 2rem; font-weight: 800; color: #8b5cf6;">Enterprise</div>
-              <div style="font-size: 0.85rem; color: #64748b;">PostgreSQL Security</div>
+              <div style="font-size: 2rem; font-weight: 800; color: #8b5cf6;">Instant</div>
+              <div style="font-size: 0.85rem; color: #64748b;">Live Synchronization</div>
             </div>
           </div>
         </div>
